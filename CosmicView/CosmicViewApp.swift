@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct CosmicViewApp: App {
@@ -24,5 +25,6 @@ struct CosmicViewApp: App {
         WindowGroup {
             MainView()
         }
+        .modelContainer(for: FavoriteAPOD.self)
     }
 }

@@ -6,14 +6,25 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
     
+    @Environment(\.modelContext) private var context
+
     @ObservedObject var vm: APODViewModel
     
     @State private var selectedDate = Date()
     @State private var showFullImage = false
     @State private var imageScale: CGFloat = 1.0
+    
+    let initialDate: Date?
+    init(vm: APODViewModel, initialDate: Date? = nil) {
+        self.vm = vm
+        self.initialDate = initialDate
+    }
+
+
     
     private let apodStartDate = Calendar.current.date(
         from: DateComponents(year: 1995, month: 6, day: 16)
@@ -42,17 +53,34 @@ struct ContentView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
                 }
             }
-            .navigationTitle("NASA APOD")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.windowBackground, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .navigationTitle("Cosmic View")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .onAppear {
-            if vm.apod == nil {
+            if let initialDate {
+                selectedDate = initialDate
+                vm.fetch(date: initialDate)
+            } else if vm.apod == nil {
                 vm.fetch()
             }
         }
+
     }
+    
+    // Save data to Favorites using SwiftData
+    private func saveToFavorites(apod: APOD) {
+        let favorite = FavoriteAPOD(
+            date: apod.date,
+            title: apod.title,
+            imageURL: apod.url
+        )
+        context.insert(favorite)
+    }
+
+
 }
 
 extension ContentView {
@@ -214,22 +242,42 @@ extension ContentView {
     
     private func successImageView(image: Image) -> some View {
         GeometryReader { geometry in
-            image
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: geometry.size.width, height: 280)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: 24))
-                .overlay(borderedOverlay(cornerRadius: 24))
-                .shadow(color: .purple.opacity(0.4), radius: 30, x: 0, y: 15)
-                .scaleEffect(imageScale)
-                .onTapGesture {
-                    handleImageTap()
+            ZStack(alignment: .topTrailing) {
+
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: 280)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(borderedOverlay(cornerRadius: 24))
+                    .shadow(color: .purple.opacity(0.4), radius: 30, x: 0, y: 15)
+                    .scaleEffect(imageScale)
+                    .onTapGesture {
+                        handleImageTap()
+                    }
+
+                // Save Button for the 
+                if let apod = vm.apod {
+                    Button {
+                        saveToFavorites(apod: apod)
+                    } label: {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                            .padding(10)
+                            .background(
+                                Circle()
+                                    .fill(Color.black.opacity(0.6))
+                            )
+                    }
+                    .padding(12)
                 }
+            }
         }
         .frame(height: 280)
     }
-    
+
     // Image Failure
     
     private var imageFailureView: some View {

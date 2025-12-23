@@ -10,7 +10,7 @@ import Photos
 
 struct FullScreenImageView: View {
 
-        let imageURL: String
+    let imageURL: String
     let title: String?
     let date: String?
     let copyright: String?

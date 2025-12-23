@@ -6,20 +6,26 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SavedView: View {
-    
-    @State private var savedAPODs: [APOD] = []
-    @State private var selectedAPOD: APOD?
+
+    @Query(sort: \FavoriteAPOD.date, order: .reverse)
+    private var favorites: [FavoriteAPOD]
+
+    @Environment(\.modelContext) private var context
+
+
+    @State private var selectedAPOD: FavoriteAPOD?
     @State private var showDetail = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 backgroundGradient.ignoresSafeArea()
                 
                 Group {
-                    if savedAPODs.isEmpty {
+                    if favorites.isEmpty {
                         emptyState
                     } else {
                         savedListView
@@ -27,19 +33,28 @@ struct SavedView: View {
                 }
             }
             .navigationTitle("Saved")
+            .navigationSubtitle(Text("List of the saved APOD"))
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)        }
+            .toolbarColorScheme(.dark, for: .navigationBar)
+
+        }
     }
+    
+    // Convert Date to String
+    private func dateFromString(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        return formatter.date(from: value)
+    }
+
 }
 
-//  View Components Extension
-
 extension SavedView {
-    
+
     // MARK: Background
-    
     private var backgroundGradient: some View {
         LinearGradient(
             colors: [
@@ -50,17 +65,14 @@ extension SavedView {
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
-        .ignoresSafeArea()
     }
-    
+
     // MARK: Empty State
-    
     private var emptyState: some View {
         VStack(spacing: 24) {
             Spacer()
-            
+
             VStack(spacing: 20) {
-                // Animated bookmark icon
                 ZStack {
                     Circle()
                         .fill(
@@ -72,7 +84,7 @@ extension SavedView {
                         )
                         .frame(width: 120, height: 120)
                         .blur(radius: 20)
-                    
+
                     Image(systemName: "bookmark.fill")
                         .font(.system(size: 56))
                         .foregroundStyle(
@@ -83,53 +95,29 @@ extension SavedView {
                             )
                         )
                 }
-                
+
                 VStack(spacing: 12) {
                     Text("No Saved Items")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-                    
-                    Text("Save your favorite astronomy pictures to view them later.")
+
+                    Text("Save your favorite astronomy day to view them later.")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
-                        .lineSpacing(4)
                         .padding(.horizontal, 40)
                 }
-                
-                // Instruction card
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "lightbulb.fill")
-                            .font(.title3)
-                            .foregroundStyle(.yellow)
-                        
-                        Text("Quick Tip")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                    }
-                    
-                    Text("Tap the bookmark icon on any APOD to save it here for quick access.")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.8))
-                        .lineSpacing(4)
-                }
-                .padding(20)
-                .background(glassMorphicCard(cornerRadius: 20))
-                .padding(.horizontal, 32)
-                .padding(.top, 8)
             }
-            
+
             Spacer()
         }
     }
-    
-    //  Saved List View
-    
+
+    // MARK: Saved List View
     private var savedListView: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 16) {
-                ForEach(savedAPODs) { apod in
+                ForEach(favorites) { apod in
                     savedItemCard(apod: apod)
                 }
             }
@@ -137,18 +125,22 @@ extension SavedView {
             .padding(.vertical, 16)
         }
     }
+
     
-    //  Saved Item Card
-    
-    private func savedItemCard(apod: APOD) -> some View {
-        Button {
-            selectedAPOD = apod
-            showDetail = true
+    // MARK: Saved Item Card
+    private func savedItemCard(apod: FavoriteAPOD) -> some View {
+        NavigationLink {
+            if let date = dateFromString(apod.date) {
+                ContentView(
+                    vm: APODViewModel(),
+                    initialDate: date
+                )
+            }
         } label: {
             HStack(spacing: 16) {
+
                 // Thumbnail
-                if apod.mediaType == "image",
-                   let url = URL(string: apod.url) {
+                if let url = URL(string: apod.imageURL) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .empty:
@@ -165,18 +157,15 @@ extension SavedView {
                             EmptyView()
                         }
                     }
-                } else {
-                    videoThumbnail
                 }
-                
+
                 // Info
                 VStack(alignment: .leading, spacing: 6) {
                     Text(apod.title)
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    
+
                     HStack(spacing: 8) {
                         Image(systemName: "calendar")
                             .font(.caption2)
@@ -184,22 +173,11 @@ extension SavedView {
                             .font(.caption)
                     }
                     .foregroundStyle(.white.opacity(0.7))
-                    
-                    if let copyright = apod.copyright, !copyright.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "c.circle")
-                                .font(.caption2)
-                            Text(copyright)
-                                .font(.caption2)
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(.white.opacity(0.5))
-                    }
+
                 }
-                
+
                 Spacer()
-                
-                // Arrow indicator
+
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.4))
@@ -207,23 +185,26 @@ extension SavedView {
             .padding(16)
             .background(glassMorphicCard(cornerRadius: 16))
         }
-        .buttonStyle(ScaleButtonStyle())
+        .contextMenu {
+            Button(role: .destructive) {
+                context.delete(apod)
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
     }
-    
-    // Thumbnail Placeholder
-    
+
+
+    // MARK: Helpers
     private var thumbnailPlaceholder: some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(.ultraThinMaterial)
             .frame(width: 80, height: 80)
             .overlay {
-                ProgressView()
-                    .tint(.white)
+                ProgressView().tint(.white)
             }
     }
-    
-    // Thumbnail Failure
-    
+
     private var thumbnailFailure: some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(.ultraThinMaterial)
@@ -233,56 +214,13 @@ extension SavedView {
                     .foregroundStyle(.white.opacity(0.5))
             }
     }
-    
-    // MARK: Video Thumbnail
-    
-    private var videoThumbnail: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(
-                LinearGradient(
-                    colors: [.blue.opacity(0.3), .purple.opacity(0.3)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .frame(width: 80, height: 80)
-            .overlay {
-                Image(systemName: "play.circle.fill")
-                    .font(.title)
-                    .foregroundStyle(.white.opacity(0.8))
-            }
-    }
-    
-    
-    
+
     private func glassMorphicCard(cornerRadius: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: cornerRadius)
             .fill(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.3), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: .purple.opacity(0.3), radius: 20, x: 0, y: 10)
+            .shadow(color: .purple.opacity(0.3), radius: 20)
     }
 }
-
-//  Scale Button Style
-
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
-    }
-}
-
 
 
 #Preview {
