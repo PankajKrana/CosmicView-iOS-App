@@ -13,12 +13,15 @@ CosmicView is a modern iOS app built with **SwiftUI** that displays NASA’s
 - 🌈 Glassmorphism & gradient-based UI
 - ⚡️ Async networking with Combine
 - 🧠 MVVM architecture
+- 💿 Store Data Locally
 
 ---
 
 ## 🛠 Tech Stack
 
 - SwiftUI
+- SwiftData
+- Swift
 - Combine
 - MVVM
 - NASA APOD API
@@ -39,7 +42,7 @@ For higher rate limits, replace it with your own NASA API key.
 ## ▶️ Demo Video
 
 🎥 Watch the demo here:  
-[👉 Video_Demo](https://drive.google.com/file/d/16cpEsmDp2oCrZZl3CD5l3L51pxSWbokp/view?usp=sharing)
+[👉 Video_Demo](https://drive.google.com/file/d/11u9TbEbpkYxdjXOrhd24S-4AieihKBTi/view?usp=sharing)
 
 
 ---
@@ -48,6 +51,6 @@ For higher rate limits, replace it with your own NASA API key.
 
 1. Clone the repository
 2. Open `CosmicView.xcodeproj`
-3. Run on iOS 17 or later
+3. Run on iOS 26 or later
 
 ---
